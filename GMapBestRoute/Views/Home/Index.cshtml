@@ -1,0 +1,231 @@
+﻿@{
+    ViewBag.Title = "Calculate";
+}
+
+<style>
+     /* Always set the map height explicitly to define the size of the div
+    * element that contains the map. */
+    #map {
+        height: 400px;
+        width: 100%;
+    }
+</style>
+
+</br>
+
+<h2 style="text-align: center">@ViewBag.Title</h2>
+
+</br>
+
+<div class="row">
+    <div id="points" class="form-group col-md-4">
+
+        <table class="table locations">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Latitude</th>
+                    <th scope="col">Longitude</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="location">
+                    <th scope="row">1</th>
+                    <td>-37.822066</td>
+                    <td>144.963454</td>
+                </tr>
+                <tr class="location">
+                    <th scope="row">2</th>
+                    <td>-37.841936</td>
+                    <td>144.935747</td>
+                </tr>
+                <tr class="location">
+                    <th scope="row">3</th>
+                    <td>-37.803082</td>
+                    <td>144.862707</td>
+                </tr>
+                <tr class="location">
+                    <th scope="row">4</th>
+                    <td>-35.309049</td>
+                    <td>149.108155</td>
+                </tr>
+                <tr class="location">
+                    <th scope="row">5</th>
+                    <td>-37.807772</td>
+                    <td>145.059477</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table">
+            <tbody>
+                <tr>
+                    <th class="text-center" scope="row">Origin (A)</th>
+                    <td>
+                        <select id="origin">
+                            <option disabled selected value> -- select a point -- </option>
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="text-center" scope="row">Destination (E)</th>
+                    <td>
+                        <select id="destination">
+                            <option disabled selected value> -- select a point -- </option>
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                        </select>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+    
+    <div id="map" class="col-md-8">
+        <script src="https://maps.googleapis.com/maps/api/js?key=YOUR-API-KEY&callback=initMap" async defer></script>
+    </div>
+</div>
+
+<script>
+
+    var globals = {}
+    globals.markers = []
+    globals.points = []
+    globals.origin = 0
+    globals.destination = 0
+    var map, directionsDisplay
+    // globals.distMatrix = {}
+
+    function initMap() {
+
+        //create empty LatLngBounds object
+        var bounds = new google.maps.LatLngBounds();
+        var id = 'A'
+        
+        $('.location').each(function (i, obj) {
+
+            var coords = [obj.cells[1].innerHTML, obj.cells[2].innerHTML], lat = parseFloat(coords[0]), long = parseFloat(coords[1])
+            var p = new google.maps.LatLng(lat, long)
+            directionsDisplay = new google.maps.DirectionsRenderer()
+
+            if (i == 0) {
+                var mapOptions = {
+                    zoom: 7,
+                    center: p
+                }
+                map = new google.maps.Map(document.getElementById('map'), mapOptions);
+                directionsDisplay.setMap(map)
+            }
+            
+            var marker = new google.maps.Marker({
+                title: id,
+                position: p,
+                map: map
+            })
+
+            //extend the bounds to include each marker's position
+            bounds.extend(marker.position)
+
+            globals.points.push({
+                id : id,
+                point: p
+            })
+
+            //now fit the map to the newly inclusive bounds
+            map.fitBounds(bounds)
+            
+            id = String.fromCharCode(id.charCodeAt(0) + 1)  // increment ID
+        })
+    }
+
+    function calcBestRoute() {
+        var directionsService = new google.maps.DirectionsService()
+        var o = globals.points[globals.origin-1].point, d = globals.points[globals.destination-1].point
+        var pts = [1, 2, 3, 4, 5]  // array that will contain the indexs of the points other than the origin and destination
+        pts.indexOf(globals.destination)
+        pts.splice(pts.indexOf(globals.origin), 1)
+        pts.splice(pts.indexOf(globals.destination), 1)
+        pts.forEach(function(element, i) {
+            pts[i] = element-1
+        })
+
+        var request = {
+            origin: o,
+            destination: d,
+            waypoints: [{ location: globals.points[pts[0]].point, stopover: true },
+                        { location: globals.points[pts[1]].point, stopover: true },
+                        { location: globals.points[pts[2]].point, stopover: true }],
+            optimizeWaypoints: true,
+            travelMode: 'DRIVING'
+        }
+        directionsService.route(request, function (result, status) {
+            console.log(request)
+            if (status == 'OK') {
+                directionsDisplay.setDirections(result)
+                directionsDisplay.setMap(map)
+            }
+        })
+    }
+
+    $('#origin').change(function () {
+        
+        globals.origin = parseInt($(this).val())
+        if (globals.origin == globals.destination) {
+            alert('Origin and Destination cannot be the same')
+            $(this).val('')
+        }
+        else if (globals.destination != 0) {
+            calcBestRoute()
+        }
+    })
+
+    $('#destination').change(function () {
+
+        globals.destination = parseInt($(this).val())
+        if (globals.origin == globals.destination) {
+            alert('Origin and Destination cannot be the same')
+            $(this).val('')
+        }
+        else if (globals.origin != 0) {
+            calcBestRoute()
+        }
+    })
+
+    //function calculateDistances() {
+    //    var service = new google.maps.DistanceMatrixService()
+    //    var origins = [], dests = []
+
+    //    globals.points.forEach(function (obj, i) {
+
+    //        origins.push(obj.point)
+    //        dests.push(obj.point)
+    //    })
+
+    //    service.getDistanceMatrix(
+    //        {
+    //            origins: origins,
+    //            destinations: dests,
+    //            travelMode: 'DRIVING'
+    //        }, callback)
+
+    //    function callback(response, status) {
+
+    //        response.rows.forEach(function (obj, i) {
+    //            globals.distMatrix[i] = []
+    //            obj.elements.forEach(function (element, j) {
+    //                var distance = element.distance.value
+    //                globals.distMatrix[i].push(distance == 0 ? Number.MAX_SAFE_INTEGER : distance)
+    //            })
+    //        })
+    //    }
+    //}
+</script>
