@@ -182,6 +182,8 @@
         if (globals.origin == globals.destination) {
             alert('Origin and Destination cannot be the same')
             $(this).val('')
+            globals.origin = 0
+            initMap()
         }
         else if (globals.destination != 0) {
             calcBestRoute()
@@ -194,6 +196,8 @@
         if (globals.origin == globals.destination) {
             alert('Origin and Destination cannot be the same')
             $(this).val('')
+            globals.destination = 0
+            initMap()
         }
         else if (globals.origin != 0) {
             calcBestRoute()
